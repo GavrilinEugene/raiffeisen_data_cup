@@ -53,12 +53,13 @@ def plot_terminal(terminal_id, df, save = True):
 
   
 # отрисовка места работы и дома + всех транзакций
-def plot_one_person(person_id, df, save = True):
+def plot_one_person(person_id, df, save = True, predicted_home = None, predicted_work = None):
     transactions = df[df.customer_id == person_id]
     home_address = transactions[['home_add_lat','home_add_lon']].drop_duplicates()
     work_address = transactions[['work_add_lat','work_add_lon']].drop_duplicates()
 
     map_osm = folium.Map(location=[home_address.iloc[0][0],home_address.iloc[0][1]])
+    tr_cnt = transactions.groupby(['terminal_id'])['terminal_id'].count().reset_index(name = 'cnt')
     transactions_disct = transactions[['terminal_id','tran_lat','tran_lon', 'mcc_common']].drop_duplicates()
     transactions_disct.dropna(inplace = True)
     home_address.dropna(inplace = True)
@@ -71,6 +72,7 @@ def plot_one_person(person_id, df, save = True):
     for idx, homes in home_address.iterrows():
         coord = (homes['home_add_lat'], homes['home_add_lon'])
         radius= abs(int(0.02 * 113.320 * np.cos(homes['home_add_lat']) * 1000))
+        radius= 2000
         plot_marker(map_osm, coord, popup=person_id, icon = folium.Icon(color='blue',icon='home'))
         plot_circle(map_osm, coord, radius)
 
@@ -78,9 +80,24 @@ def plot_one_person(person_id, df, save = True):
     for idx, works in work_address.iterrows():
         coord = (works['work_add_lat'], works['work_add_lon'])
         radius= abs(int(0.02 * 113.320 * np.cos(works['work_add_lat']) * 1000))
+        radius= 2000
 
         plot_marker(map_osm, coord, popup=person_id, icon = folium.Icon(color='black',icon='briefcase'))
         plot_circle(map_osm, coord, radius, color = 'black', fill_color='#3186cc') 
+        
+    # рисуем предсказанный дом    
+    if  predicted_home != None:
+        radius= 2000
+        plot_marker(map_osm, predicted_home, popup=person_id, icon = folium.Icon(color='yellow',icon='home'))
+        plot_circle(map_osm, predicted_home, radius, color = 'yellow') 
+
+     # рисуем предсказанную работу
+    if  predicted_work != None:
+
+        radius= abs(int(0.02 * 113.320 * np.cos(predicted_work[0]) * 1000))
+        radius= 2000
+        plot_marker(map_osm, predicted_work, popup=person_id, icon = folium.Icon(color='gray',icon='briefcase'))
+        plot_circle(map_osm, predicted_work, radius, color = 'gray', fill_color='#3186cc')          
 
     # рисуем транзакции
     add_transactions_to_map(map_osm, transactions_disct)
